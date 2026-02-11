@@ -1,4 +1,4 @@
-# CEOpenOrchestrator
+# CEOpenOrchestrator (CEOO)
 
 Parallel workflow orchestration for OpenCode - implementing the Compound Engineering methodology.
 
