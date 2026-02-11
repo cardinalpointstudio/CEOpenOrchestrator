@@ -1,0 +1,13 @@
+{
+  "name": "Express.js",
+  "scopes": {
+    "backend": ["src/routes/**", "src/models/**", "src/middleware/**", "src/controllers/**", "src/services/**"],
+    "frontend": [],
+    "tests": ["tests/**", "**/*.test.js", "**/*.spec.js", "**/*.test.ts", "**/*.spec.ts"]
+  },
+  "commands": {
+    "test": "bun test",
+    "lint": "eslint .",
+    "typecheck": null
+  }
+}

@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CEOpenOrchestrator Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
+</head>
+<body>
+    <div class="app">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-title">
+                <span class="logo">⚡</span>
+                <h1>CEOpenOrchestrator</h1>
+            </div>
+            <div class="connection-status" id="connection-status">
+                <span class="status-dot"></span>
+                <span id="connection-text">Connecting...</span>
+            </div>
+        </header>
+
+        <!-- Tab Navigation -->
+        <nav class="tab-nav">
+            <button class="tab-btn active" data-tab="orchestrator" data-window="1">
+                <span class="tab-icon">🎛️</span>
+                <span class="tab-label">Orch</span>
+            </button>
+            <button class="tab-btn" data-tab="plan" data-window="2">
+                <span class="tab-icon">💬</span>
+                <span class="tab-label">PM</span>
+            </button>
+            <button class="tab-btn" data-tab="backend" data-window="3">
+                <span class="tab-icon">⚙️</span>
+                <span class="tab-label">Back</span>
+            </button>
+            <button class="tab-btn" data-tab="frontend" data-window="4">
+                <span class="tab-icon">⚙️</span>
+                <span class="tab-label">Front</span>
+            </button>
+            <button class="tab-btn" data-tab="tests" data-window="5">
+                <span class="tab-icon">⚙️</span>
+                <span class="tab-label">Tests</span>
+            </button>
+            <button class="tab-btn" data-tab="review" data-window="6">
+                <span class="tab-icon">🔍</span>
+                <span class="tab-label">Review</span>
+            </button>
+            <button class="tab-btn" data-tab="status" data-window="7">
+                <span class="tab-icon">📊</span>
+                <span class="tab-label">Dashboard</span>
+            </button>
+        </nav>
+
+        <!-- Tab Content -->
+        <main class="tab-content">
+            <!-- Orchestrator Tab -->
+            <div class="tab-panel active" id="orchestrator-panel">
+                <div class="orchestrator-grid">
+                    <!-- Status Overview -->
+                    <section class="card status-card">
+                        <h2>Status Overview</h2>
+                        <div class="status-grid">
+                            <div class="status-item">
+                                <label>Phase</label>
+                                <div class="value" id="orch-phase">-</div>
+                            </div>
+                            <div class="status-item">
+                                <label>Iteration</label>
+                                <div class="value" id="orch-iteration">-</div>
+                            </div>
+                            <div class="status-item">
+                                <label>Branch</label>
+                                <div class="value" id="orch-branch">-</div>
+                            </div>
+                            <div class="status-item">
+                                <label>Commits</label>
+                                <div class="value" id="orch-commits">-</div>
+                            </div>
+                        </div>
+                        <div class="feature-name" id="orch-feature-container" style="display: none;">
+                            <label>Feature</label>
+                            <div class="value" id="orch-feature-name">-</div>
+                        </div>
+                    </section>
+
+                    <!-- Control Panel -->
+                    <section class="card control-card">
+                        <h2>Control Panel</h2>
+                        <div class="control-grid">
+                            <button class="control-btn" data-action="dispatch_plan">
+                                <span class="btn-key">P</span>
+                                <span class="btn-label">Plan → Workers</span>
+                            </button>
+                            <button class="control-btn" data-action="dispatch_review">
+                                <span class="btn-key">R</span>
+                                <span class="btn-label">Review</span>
+                            </button>
+                            <button class="control-btn" data-action="dispatch_refine">
+                                <span class="btn-key">F</span>
+                                <span class="btn-label">Refine</span>
+                            </button>
+                            <button class="control-btn" data-action="dispatch_compound">
+                                <span class="btn-key">C</span>
+                                <span class="btn-label">Compound</span>
+                            </button>
+                            <button class="control-btn" data-action="create_pr">
+                                <span class="btn-key">G</span>
+                                <span class="btn-label">Push & PR</span>
+                            </button>
+                            <button class="control-btn" data-action="commit_checkpoint">
+                                <span class="btn-key">K</span>
+                                <span class="btn-label">Commit</span>
+                            </button>
+                            <button class="control-btn secondary" data-action="refresh_status">
+                                <span class="btn-key">S</span>
+                                <span class="btn-label">Refresh</span>
+                            </button>
+                            <button class="control-btn secondary" data-action="new_feature">
+                                <span class="btn-key">N</span>
+                                <span class="btn-label">New Feature</span>
+                            </button>
+                        </div>
+                    </section>
+
+                    <!-- Signals -->
+                    <section class="card signals-card">
+                        <h2>Signals</h2>
+                        <div class="signals-list" id="orch-signals">
+                            <!-- Populated by JS -->
+                        </div>
+                    </section>
+
+                    <!-- Review Status -->
+                    <section class="card review-card" id="orch-review-section" style="display: none;">
+                        <h2>Review Status</h2>
+                        <div class="review-status" id="orch-review-status">-</div>
+                    </section>
+
+                    <!-- Branch Management -->
+                    <section class="card branch-card">
+                        <h2>Branch Management</h2>
+                        <div class="branch-status" id="branch-status">
+                            <div class="branch-current">
+                                <label>Current Branch:</label>
+                                <span class="branch-name" id="branch-name">-</span>
+                                <span class="branch-warning" id="branch-warning" style="display: none;">⚠️ Main branch</span>
+                            </div>
+                            <div class="branch-sync" id="branch-sync" style="display: none;">
+                                <span class="ahead" id="branch-ahead">+0</span>
+                                <span class="behind" id="branch-behind">-0</span>
+                                <span class="sync-label">vs main</span>
+                            </div>
+                        </div>
+                        <div class="branch-actions">
+                            <button class="control-btn" id="branch-menu-btn">
+                                <span class="btn-key">B</span>
+                                <span class="btn-label">Branch Options</span>
+                            </button>
+                        </div>
+                        <div class="branch-menu" id="branch-menu" style="display: none;">
+                            <h3>Branch Options</h3>
+                            <div class="menu-items">
+                                <button class="menu-item" data-branch-action="switch">
+                                    <span class="menu-icon">🔄</span>
+                                    <span class="menu-label">Switch Branch</span>
+                                </button>
+                                <button class="menu-item" data-branch-action="new">
+                                    <span class="menu-icon">➕</span>
+                                    <span class="menu-label">Create New Branch</span>
+                                </button>
+                                <button class="menu-item" data-branch-action="save">
+                                    <span class="menu-icon">💾</span>
+                                    <span class="menu-label">Save Session</span>
+                                </button>
+                                <button class="menu-item" data-branch-action="load">
+                                    <span class="menu-icon">📂</span>
+                                    <span class="menu-label">Load Session</span>
+                                </button>
+                                <button class="menu-item danger" data-branch-action="clear">
+                                    <span class="menu-icon">🗑️</span>
+                                    <span class="menu-label">Clear Session</span>
+                                </button>
+                            </div>
+                            <button class="menu-close" id="branch-menu-close">Cancel</button>
+                        </div>
+                        <div class="branch-list" id="branch-list" style="display: none;">
+                            <h3>Recent Branches</h3>
+                            <ul id="recent-branches"></ul>
+                        </div>
+
+                        <!-- Branch Switcher Dialog -->
+                        <div class="branch-switcher-dialog" id="branch-switcher-dialog" style="display: none;">
+                            <div class="dialog-overlay"></div>
+                            <div class="dialog-content">
+                                <h3>Switch Branch</h3>
+                                <div class="branch-list-container" id="switch-branch-list">
+                                    <!-- Populated by JS -->
+                                </div>
+                                <div class="dialog-actions">
+                                    <button class="btn btn-secondary" id="branch-switcher-cancel">Cancel</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- New Branch Dialog -->
+                        <div class="new-branch-dialog" id="new-branch-dialog" style="display: none;">
+                            <div class="dialog-overlay"></div>
+                            <div class="dialog-content">
+                                <h3>Create New Branch</h3>
+                                <div class="form-group">
+                                    <label>Template:</label>
+                                    <select id="new-branch-template">
+                                        <option value="compound">Compound Feature (compound/YYYYMMDD-name)</option>
+                                        <option value="feature">Feature Branch (feature/name)</option>
+                                        <option value="hotfix">Hotfix (hotfix/name)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Branch Name: <span class="input-hint">(Press Tab to use default)</span></label>
+                                    <input type="text" id="new-branch-name" placeholder="Enter branch name (without prefix)">
+                                </div>
+                                <div class="dialog-actions">
+                                    <button class="btn btn-secondary" id="new-branch-cancel">Cancel</button>
+                                    <button class="btn btn-primary" id="new-branch-create">Create</button>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Session Management -->
+                    <section class="card session-card">
+                        <h2>Session Management</h2>
+                        <div class="session-status" id="session-status">
+                            <div class="session-info">
+                                <label>Session:</label>
+                                <span id="session-active">No active session</span>
+                            </div>
+                            <div class="session-timeline" id="session-timeline" style="display: none;">
+                                <span id="timeline-count">0</span> events tracked
+                            </div>
+                        </div>
+                        <div class="session-actions">
+                            <button class="control-btn secondary" data-action="export_session">
+                                <span class="btn-key">E</span>
+                                <span class="btn-label">Export Log</span>
+                            </button>
+                            <button class="control-btn secondary" data-action="clear_session">
+                                <span class="btn-key">X</span>
+                                <span class="btn-label">Clear & Restart</span>
+                            </button>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- Worker Tabs (Template for each) -->
+            <div class="tab-panel" id="plan-panel" data-window="2">
+                <div class="worker-layout">
+                    <div class="worker-header">
+                        <h2>PM (Project Manager)</h2>
+                        <div class="worker-status" id="plan-status">Idle</div>
+                    </div>
+                    <div class="terminal-container" id="plan-terminal">
+                        <div class="terminal-output" id="plan-output"></div>
+                    </div>
+                    <div class="input-section">
+                        <div class="input-header">
+                            <label>Send to PM</label>
+                            <div class="input-history-nav">
+                                <button id="plan-history-up" title="Previous message">↑</button>
+                                <button id="plan-history-down" title="Next message">↓</button>
+                            </div>
+                        </div>
+                        <textarea 
+                            class="input-box" 
+                            id="plan-input" 
+                            placeholder="Type your message here..."
+                            rows="3"
+                        ></textarea>
+                        <div class="input-actions">
+                            <button class="btn btn-secondary" id="plan-send-keys">
+                                Send Keystrokes
+                            </button>
+                            <button class="btn btn-primary" id="plan-send-prompt">
+                                Send as Prompt
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-panel" id="backend-panel" data-window="3">
+                <div class="worker-layout">
+                    <div class="worker-header">
+                        <h2>Backend Window</h2>
+                        <div class="worker-status" id="backend-status">Idle</div>
+                    </div>
+                    <div class="terminal-container" id="backend-terminal">
+                        <div class="terminal-output" id="backend-output"></div>
+                    </div>
+                    <div class="input-section">
+                        <div class="input-header">
+                            <label>Send to Backend Window</label>
+                            <div class="input-history-nav">
+                                <button id="backend-history-up">↑</button>
+                                <button id="backend-history-down">↓</button>
+                            </div>
+                        </div>
+                        <textarea class="input-box" id="backend-input" placeholder="Type your message here..." rows="3"></textarea>
+                        <div class="input-actions">
+                            <button class="btn btn-secondary" id="backend-send-keys">Send Keystrokes</button>
+                            <button class="btn btn-primary" id="backend-send-prompt">Send as Prompt</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-panel" id="frontend-panel" data-window="4">
+                <div class="worker-layout">
+                    <div class="worker-header">
+                        <h2>Frontend Window</h2>
+                        <div class="worker-status" id="frontend-status">Idle</div>
+                    </div>
+                    <div class="terminal-container" id="frontend-terminal">
+                        <div class="terminal-output" id="frontend-output"></div>
+                    </div>
+                    <div class="input-section">
+                        <div class="input-header">
+                            <label>Send to Frontend Window</label>
+                            <div class="input-history-nav">
+                                <button id="frontend-history-up">↑</button>
+                                <button id="frontend-history-down">↓</button>
+                            </div>
+                        </div>
+                        <textarea class="input-box" id="frontend-input" placeholder="Type your message here..." rows="3"></textarea>
+                        <div class="input-actions">
+                            <button class="btn btn-secondary" id="frontend-send-keys">Send Keystrokes</button>
+                            <button class="btn btn-primary" id="frontend-send-prompt">Send as Prompt</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-panel" id="tests-panel" data-window="5">
+                <div class="worker-layout">
+                    <div class="worker-header">
+                        <h2>Tests Window</h2>
+                        <div class="worker-status" id="tests-status">Idle</div>
+                    </div>
+                    <div class="terminal-container" id="tests-terminal">
+                        <div class="terminal-output" id="tests-output"></div>
+                    </div>
+                    <div class="input-section">
+                        <div class="input-header">
+                            <label>Send to Tests Window</label>
+                            <div class="input-history-nav">
+                                <button id="tests-history-up">↑</button>
+                                <button id="tests-history-down">↓</button>
+                            </div>
+                        </div>
+                        <textarea class="input-box" id="tests-input" placeholder="Type your message here..." rows="3"></textarea>
+                        <div class="input-actions">
+                            <button class="btn btn-secondary" id="tests-send-keys">Send Keystrokes</button>
+                            <button class="btn btn-primary" id="tests-send-prompt">Send as Prompt</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-panel" id="review-panel" data-window="6">
+                <div class="worker-layout">
+                    <div class="worker-header">
+                        <h2>Review Window</h2>
+                        <div class="worker-status" id="review-status">Idle</div>
+                    </div>
+                    <div class="terminal-container" id="review-terminal">
+                        <div class="terminal-output" id="review-output"></div>
+                    </div>
+                    <div class="input-section">
+                        <div class="input-header">
+                            <label>Send to Review Window</label>
+                            <div class="input-history-nav">
+                                <button id="review-history-up">↑</button>
+                                <button id="review-history-down">↓</button>
+                            </div>
+                        </div>
+                        <textarea class="input-box" id="review-input" placeholder="Type your message here..." rows="3"></textarea>
+                        <div class="input-actions">
+                            <button class="btn btn-secondary" id="review-send-keys">Send Keystrokes</button>
+                            <button class="btn btn-primary" id="review-send-prompt">Send as Prompt</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Tab -->
+            <div class="tab-panel" id="status-panel">
+                <div class="dashboard-layout">
+                    <!-- Project Info Card -->
+                    <section class="card project-info-card">
+                        <h2>Project Status</h2>
+                        <div class="project-info" id="project-info">
+                            <div class="info-row">
+                                <span class="info-label">Feature:</span>
+                                <span class="info-value" id="project-feature">-</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Branch:</span>
+                                <span class="info-value" id="project-branch">-</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Phase:</span>
+                                <span class="info-value" id="project-phase">-</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Commits:</span>
+                                <span class="info-value" id="project-commits">-</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Last Activity:</span>
+                                <span class="info-value" id="project-last-activity">-</span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Timeline Card -->
+                    <section class="card timeline-card">
+                        <h2>Timeline <span class="card-subtitle" id="timeline-count">(0 events)</span></h2>
+                        <div class="timeline-list" id="timeline-list">
+                            <p class="empty-message">No timeline events yet</p>
+                        </div>
+                    </section>
+
+                    <!-- Branch History Card -->
+                    <section class="card branch-history-card">
+                        <h2>Branch History <span class="card-subtitle" id="branch-count">(0 branches)</span></h2>
+                        <div class="branch-history-list" id="branch-history-list">
+                            <p class="empty-message">No branches with saved sessions</p>
+                        </div>
+                    </section>
+
+                    <!-- Quick Actions Card -->
+                    <section class="card quick-actions-card">
+                        <h2>Quick Actions</h2>
+                        <div class="quick-actions">
+                            <button class="action-btn" id="dashboard-export-json">
+                                <span class="action-icon">📄</span>
+                                <span class="action-label">Export JSON</span>
+                            </button>
+                            <button class="action-btn" id="dashboard-export-md">
+                                <span class="action-icon">📝</span>
+                                <span class="action-label">Export Markdown</span>
+                            </button>
+                            <button class="action-btn" id="dashboard-save-session">
+                                <span class="action-icon">💾</span>
+                                <span class="action-label">Save Session</span>
+                            </button>
+                            <button class="action-btn secondary" id="dashboard-refresh">
+                                <span class="action-icon">🔄</span>
+                                <span class="action-label">Refresh</span>
+                            </button>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

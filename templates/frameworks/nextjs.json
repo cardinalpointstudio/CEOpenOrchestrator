@@ -1,0 +1,13 @@
+{
+  "name": "Next.js",
+  "scopes": {
+    "backend": ["src/app/api/**", "src/lib/**", "prisma/**", "src/server/**"],
+    "frontend": ["src/app/**", "src/components/**", "!src/app/api/**"],
+    "tests": ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx", "__tests__/**"]
+  },
+  "commands": {
+    "test": "bun test",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "Hono",
+  "scopes": {
+    "backend": ["src/routes/**", "src/handlers/**", "src/middleware/**", "src/lib/**"],
+    "frontend": [],
+    "tests": ["tests/**", "**/*.test.ts", "**/*.spec.ts"]
+  },
+  "commands": {
+    "test": "bun test",
+    "lint": "biome check .",
+    "typecheck": "tsc --noEmit"
+  }
+}

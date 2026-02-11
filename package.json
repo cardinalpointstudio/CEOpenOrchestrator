@@ -1,0 +1,42 @@
+{
+  "name": "ce-open-orchestrator",
+  "version": "1.0.0",
+  "description": "Parallel workflow orchestration for OpenCode - Compound Engineering methodology",
+  "type": "module",
+  "bin": {
+    "ce-orchestrate": "./scripts/ce-orchestrate",
+    "ce-orch": "./scripts/ce-orchestrate"
+  },
+  "scripts": {
+    "build": "bun build src/index.ts --outfile dist/ce-orchestrate.js --target bun",
+    "dev": "bun run --watch src/index.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "prepublish": "bun run build"
+  },
+  "keywords": [
+    "opencode",
+    "orchestrator",
+    "parallel",
+    "workflow",
+    "ai",
+    "compound-engineering"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "commander": "^12.0.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.0",
+    "@types/bun": "latest",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
+  }
+}
