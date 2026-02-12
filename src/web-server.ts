@@ -8,6 +8,33 @@ import { existsSync, readFileSync, watch, readdirSync, statSync } from "node:fs"
 import { join } from "node:path";
 import { execSync, spawn } from "node:child_process";
 import type { Config } from "./types.js";
+
+// Determine web directory - check multiple locations
+function findWebDir(): string {
+  // Option 1: Running from project root (development)
+  const devPath = join(process.cwd(), "web");
+  if (existsSync(devPath)) return devPath;
+
+  // Option 2: Running from dist/ in project
+  const distPath = join(process.cwd(), "..", "web");
+  if (existsSync(distPath)) return distPath;
+
+  // Option 3: Try to find from process.argv[0] (the executable)
+  const execPath = process.argv[1] || process.execPath;
+  if (execPath) {
+    const execWebPath = join(execPath, "..", "..", "web");
+    if (existsSync(execWebPath)) return execWebPath;
+  }
+
+  // Option 4: Check common installation paths
+  const homePath = join(process.env.HOME || "", ".ce-orchestrator", "web");
+  if (existsSync(homePath)) return homePath;
+
+  // Fallback to dev path (will fail gracefully with 404)
+  return devPath;
+}
+
+const WEB_DIR = findWebDir();
 import { WORKFLOW_DIR, SESSION_NAME, WINDOWS, EXPORTS_DIR } from "./types.js";
 import { loadState, getSignals, determinePhase } from "./state.js";
 import { getReviewStatus } from "./state.js";
@@ -196,8 +223,8 @@ function getMimeType(path: string): string {
 
 // Serve static file
 function serveStaticFile(filePath: string): Response {
-  const fullPath = join(process.cwd(), "web", filePath);
-  
+  const fullPath = join(WEB_DIR, filePath);
+
   if (!existsSync(fullPath)) {
     return new Response("Not found", { status: 404 });
   }

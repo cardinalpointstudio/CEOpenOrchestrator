@@ -268,4 +268,70 @@ program
     console.log();
   });
 
+program
+  .command("detach")
+  .description("Detach from the tmux session (keeps session running)")
+  .action(() => {
+    try {
+      execSync(`tmux has-session -t ${SESSION_NAME} 2>/dev/null`);
+      execSync(`tmux detach -s ${SESSION_NAME}`);
+      console.log(chalk.green(`✓ Detached from session '${SESSION_NAME}'`));
+      console.log(chalk.dim("Session is still running. Use 'ce-orchestrate attach' to reconnect."));
+    } catch {
+      console.log(chalk.yellow(`No active session '${SESSION_NAME}' found`));
+    }
+  });
+
+program
+  .command("stop")
+  .description("Gracefully stop the tmux session (sends quit signal to orchestrator)")
+  .action(() => {
+    try {
+      execSync(`tmux has-session -t ${SESSION_NAME} 2>/dev/null`);
+      console.log(chalk.blue(`Gracefully stopping session '${SESSION_NAME}'...`));
+      
+      // Send 'q' key to orchestrator window to trigger graceful exit
+      try {
+        execSync(`tmux send-keys -t ${SESSION_NAME}:1 q`);
+        // Wait a moment for graceful shutdown
+        execSync("sleep 2");
+      } catch {
+        // Window might already be closed
+      }
+      
+      // Kill the session
+      execSync(`tmux kill-session -t ${SESSION_NAME}`);
+      console.log(chalk.green(`✓ Stopped session '${SESSION_NAME}'`));
+    } catch {
+      console.log(chalk.yellow(`No active session '${SESSION_NAME}' found`));
+    }
+  });
+
+program
+  .command("kill")
+  .description("Force kill the tmux session (destroys all windows immediately)")
+  .action(() => {
+    try {
+      execSync(`tmux has-session -t ${SESSION_NAME} 2>/dev/null`);
+      execSync(`tmux kill-session -t ${SESSION_NAME}`);
+      console.log(chalk.green(`✓ Killed session '${SESSION_NAME}'`));
+    } catch {
+      console.log(chalk.yellow(`No active session '${SESSION_NAME}' found`));
+    }
+  });
+
+program
+  .command("attach")
+  .description("Attach to existing tmux session")
+  .action(() => {
+    try {
+      execSync(`tmux has-session -t ${SESSION_NAME} 2>/dev/null`);
+      execSync(`tmux attach -t ${SESSION_NAME}`, { stdio: "inherit" });
+    } catch {
+      console.log(chalk.red(`No active session '${SESSION_NAME}' found`));
+      console.log(chalk.dim("Run 'ce-orchestrate start' to create a new session."));
+      process.exit(1);
+    }
+  });
+
 program.parse();
