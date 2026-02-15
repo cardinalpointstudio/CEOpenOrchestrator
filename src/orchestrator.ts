@@ -22,6 +22,7 @@ import {
   getInitialState,
   saveSessionToBranch,
   loadSessionFromBranch,
+  updateStateFromSignals,
 } from "./state.js";
 import { addTimelineEvent, logPhaseChange } from "./timeline.js";
 import {
@@ -1012,9 +1013,9 @@ export async function startOrchestrator(): Promise<void> {
         break;
 
       case kb.refresh_status:
-        state = loadState();
-        state.signals = getSignals();
+        state = updateStateFromSignals();
         state.commitCount = getCommitCount();
+        saveState(state);
         break;
 
       case kb.new_feature:
