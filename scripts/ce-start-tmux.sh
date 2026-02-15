@@ -5,6 +5,10 @@
 SESSION_NAME="opencode-ce"
 PROJECT_DIR="${1:-$(pwd)}"
 
+# Get the directory where this script lives, then find the dist folder
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CE_ORCHESTRATE="bun ${SCRIPT_DIR}/../dist/ce-orchestrate.js"
+
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -33,7 +37,7 @@ cd "$PROJECT_DIR" || {
 # Check for .workflow directory
 if [ ! -d ".workflow" ]; then
     echo -e "${RED}Error: No .workflow/ directory found.${NC}"
-    echo "Run 'ce-orchestrate init' first."
+    echo "Run '$CE_ORCHESTRATE init' first."
     exit 1
 fi
 
@@ -57,7 +61,7 @@ echo -e "${BLUE}Launching orchestrator and OpenCode...${NC}"
 
 # Launch orchestrator in Window 1
 tmux send-keys -t $SESSION_NAME:1 "echo -e '${BLUE}=== ORCHESTRATOR ===${NC}'" C-m
-tmux send-keys -t $SESSION_NAME:1 "ce-orchestrate start-internal" C-m
+tmux send-keys -t $SESSION_NAME:1 "$CE_ORCHESTRATE start-internal" C-m
 
 # Launch OpenCode in other windows (they'll wait for tasks)
 tmux send-keys -t $SESSION_NAME:2 "echo -e '${BLUE}=== PM (Project Manager) Window ===${NC}'" C-m
@@ -77,7 +81,7 @@ tmux send-keys -t $SESSION_NAME:6 "echo -e '${BLUE}=== REVIEW Worker ===${NC}'" 
 tmux send-keys -t $SESSION_NAME:6 "echo 'Waiting for implementation...'" C-m
 
 tmux send-keys -t $SESSION_NAME:7 "echo -e '${BLUE}=== DASHBOARD Window ===${NC}'" C-m
-tmux send-keys -t $SESSION_NAME:7 "ce-orchestrate dashboard" C-m
+tmux send-keys -t $SESSION_NAME:7 "$CE_ORCHESTRATE dashboard" C-m
 
 echo ""
 echo -e "${GREEN}══════════════════════════════════════════════${NC}"
