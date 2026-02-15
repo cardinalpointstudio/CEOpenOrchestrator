@@ -251,14 +251,27 @@ export function dispatchWorker(
   const promptFile = `/tmp/ce-worker-${role}-prompt.txt`;
   writeFileSync(promptFile, finalPrompt);
 
-  // Send to tmux window - start opencode with prompt loaded from file
+  // Workers always use the planner's model (PM sets the model for the session)
+  const model = config.models.planner;
+
+  // Create a runner script to handle quoting correctly
+  const scriptFile = `/tmp/ce-worker-${role}-run.sh`;
+  const scriptContent = `#!/bin/bash
+opencode -m "${model}" --prompt "$(cat ${promptFile})"
+`;
+  writeFileSync(scriptFile, scriptContent, { mode: 0o755 });
+
+  // Send to tmux window - clear any existing input first, then execute
   try {
-    // Use cat with command substitution to pass the prompt
-    const cmd = `opencode --prompt "$(cat ${promptFile})"`;
-    execSync(`tmux send-keys -t ${SESSION_NAME}:${window} '${cmd}'`, {
+    // Clear any existing input with Ctrl+C and Ctrl+U
+    execSync(`tmux send-keys -t ${SESSION_NAME}:${window} C-c`, { stdio: "ignore" });
+    execSync(`tmux send-keys -t ${SESSION_NAME}:${window} C-u`, { stdio: "ignore" });
+    // Small delay to ensure clear commands are processed
+    execSync(`sleep 0.1`, { stdio: "ignore" });
+    // Execute the runner script
+    execSync(`tmux send-keys -t ${SESSION_NAME}:${window} 'bash ${scriptFile}' Enter`, {
       stdio: "ignore",
     });
-    execSync(`tmux send-keys -t ${SESSION_NAME}:${window} Enter`, { stdio: "ignore" });
   } catch (e) {
     console.error(`Failed to dispatch worker ${role} to window ${window}:`, e);
   }

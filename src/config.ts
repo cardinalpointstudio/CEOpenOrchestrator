@@ -12,11 +12,11 @@ import type { Config, WorkerRole } from "./types.js";
 
 const DEFAULT_CONFIG: Config = {
   models: {
-    planner: "kimi-k2.5-free",
-    backend: "kimi-k2.5-free",
-    frontend: "kimi-k2.5-free",
-    tests: "kimi-k2.5-free",
-    reviewer: "kimi-k2.5-free",
+    planner: "opencode/kimi-k2.5-free",
+    backend: "opencode/kimi-k2.5-free",
+    frontend: "opencode/kimi-k2.5-free",
+    tests: "opencode/kimi-k2.5-free",
+    reviewer: "opencode/kimi-k2.5-free",
   },
   timeouts: {
     planner: 30,
