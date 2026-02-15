@@ -69,16 +69,16 @@ tmux send-keys -t $SESSION_NAME:2 "echo 'Describe your feature here when ready'"
 tmux send-keys -t $SESSION_NAME:2 "opencode" C-m
 
 tmux send-keys -t $SESSION_NAME:3 "echo -e '${BLUE}=== BACKEND Worker ===${NC}'" C-m
-tmux send-keys -t $SESSION_NAME:3 "echo 'Waiting for plan...'" C-m
+tmux send-keys -t $SESSION_NAME:3 "opencode" C-m
 
 tmux send-keys -t $SESSION_NAME:4 "echo -e '${BLUE}=== FRONTEND Worker ===${NC}'" C-m
-tmux send-keys -t $SESSION_NAME:4 "echo 'Waiting for plan...'" C-m
+tmux send-keys -t $SESSION_NAME:4 "opencode" C-m
 
 tmux send-keys -t $SESSION_NAME:5 "echo -e '${BLUE}=== TESTS Worker ===${NC}'" C-m
-tmux send-keys -t $SESSION_NAME:5 "echo 'Waiting for plan...'" C-m
+tmux send-keys -t $SESSION_NAME:5 "opencode" C-m
 
 tmux send-keys -t $SESSION_NAME:6 "echo -e '${BLUE}=== REVIEW Worker ===${NC}'" C-m
-tmux send-keys -t $SESSION_NAME:6 "echo 'Waiting for implementation...'" C-m
+tmux send-keys -t $SESSION_NAME:6 "opencode" C-m
 
 tmux send-keys -t $SESSION_NAME:7 "echo -e '${BLUE}=== DASHBOARD Window ===${NC}'" C-m
 tmux send-keys -t $SESSION_NAME:7 "$CE_ORCHESTRATE dashboard" C-m
