@@ -3,6 +3,7 @@
  */
 
 import { execSync } from "node:child_process";
+import { writeFileSync } from "node:fs";
 import type { Config, WorkerRole } from "./types.js";
 import { WINDOWS, SESSION_NAME } from "./types.js";
 import { getSignals } from "./state.js";
@@ -10,11 +11,20 @@ import { getSignals } from "./state.js";
 const WORKER_PROMPTS: Record<WorkerRole, string> = {
   planner: `You are the PLANNER worker for CEOpenOrchestrator.
 
+## CRITICAL: WORKING DIRECTORY
+You MUST create all artifacts at the PROJECT ROOT, not in any subdirectory.
+- Correct: .workflow/PLAN.md (at project root)
+- WRONG: app/.workflow/PLAN.md or src/.workflow/PLAN.md
+
+Before creating any files, verify you are at the project root by checking for:
+- package.json, tsconfig.json, or similar root-level config files
+- The .workflow/ directory should be a sibling to these files
+
 ## YOUR TASK
 Create a comprehensive implementation plan for the feature described by the user.
 
 ## OUTPUT ARTIFACTS
-Create these files in .workflow/:
+Create these files in .workflow/ AT THE PROJECT ROOT:
 
 1. PLAN.md - Overall strategy with:
    - Feature overview
@@ -36,7 +46,7 @@ Create these files in .workflow/:
 1. Ask clarifying questions to understand requirements
 2. Explore existing codebase for patterns
 3. Design the solution
-4. Create all artifacts
+4. Create all artifacts IN .workflow/ AT PROJECT ROOT
 5. Wait for user approval
 
 ## COMPLETION
@@ -231,19 +241,21 @@ export function dispatchWorker(
   isRefine: boolean = false
 ): void {
   const prompt = generateWorkerPrompt(role, config);
-  const phase = isRefine ? "REFINE" : "";
-  
+
   // Add refine-specific instructions if applicable
   const finalPrompt = isRefine
     ? `${prompt}\n\n## REFINE MODE\nYou are in REFINE mode. Read .workflow/REVIEW.md and fix the issues in your domain.\nWhen done: touch .workflow/signals/${role}-refine.done`
-    : `${prompt}\nWhen done: touch .workflow/signals/${role}.done`;
+    : prompt;
 
-  // Escape the prompt for tmux
-  const escaped = finalPrompt.replace(/'/g, "'\"'\"'");
-  
-  // Send to tmux window
+  // Write prompt to temp file to avoid shell escaping issues with multi-line prompts
+  const promptFile = `/tmp/ce-worker-${role}-prompt.txt`;
+  writeFileSync(promptFile, finalPrompt);
+
+  // Send to tmux window - start opencode with prompt loaded from file
   try {
-    execSync(`tmux send-keys -t ${SESSION_NAME}:${window} 'opencode --prompt '${escaped}''`, {
+    // Use cat with command substitution to pass the prompt
+    const cmd = `opencode --prompt "$(cat ${promptFile})"`;
+    execSync(`tmux send-keys -t ${SESSION_NAME}:${window} '${cmd}'`, {
       stdio: "ignore",
     });
     execSync(`tmux send-keys -t ${SESSION_NAME}:${window} Enter`, { stdio: "ignore" });
