@@ -991,7 +991,9 @@ export async function startOrchestrator(): Promise<void> {
         break;
 
       case kb.dispatch_review:
-        if (state.phase === "implementing" || state.phase === "refining") {
+        // Allow dispatch when implementing, refining, or reviewing (if reviewer not yet dispatched)
+        if (state.phase === "implementing" || state.phase === "refining" ||
+            (state.phase === "reviewing" && !state.signals.review)) {
           await handleDispatchReview(config, state);
         }
         break;
