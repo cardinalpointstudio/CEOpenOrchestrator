@@ -108,7 +108,7 @@ function renderPhase(phase: Phase, iteration: number): void {
   const color = UI.phaseColor(safePhase);
 
   console.log(`  ${chalk.bold("Phase:")} ${color(phaseLabel)}`);
-  console.log(`  ${chalk.dim(`Iteration: ${iteration}/3`)}`);
+  console.log(`  ${chalk.dim(`Iteration: ${iteration}/10`)}`);
   console.log();
 }
 
@@ -299,7 +299,7 @@ function renderSessionManagement(state: WorkflowState): void {
   console.log(`  ${chalk.cyan("─".repeat(UI.width - 4))}`);
   console.log(`  ${chalk.bold("Session Management:")}`);
   console.log();
-  console.log(`  Iteration: ${state.iteration}/3  |  Commits: ${state.commitCount ?? 0}`);
+  console.log(`  Iteration: ${state.iteration}/10  |  Commits: ${state.commitCount ?? 0}`);
   console.log();
   console.log(`  ${chalk.cyan("[E]")} Export Log  ${chalk.cyan("[X]")} Clear & Restart`);
   console.log();
@@ -417,8 +417,8 @@ async function handleDispatchRefine(config: Config, state: WorkflowState): Promi
     return;
   }
 
-  if (state.iteration >= 3) {
-    console.log(chalk.red("\n⚠️  Max iterations reached. Manual intervention required.\n"));
+  if (state.iteration >= 10) {
+    console.log(chalk.red("\n⚠️  Max iterations reached (10). Manual intervention required.\n"));
     await sleep(2000);
     return;
   }

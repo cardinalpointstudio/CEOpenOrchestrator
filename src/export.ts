@@ -114,7 +114,7 @@ function generateMarkdownReport(data: ExportData): string {
   }
   md += `**Duration:** ${calculateDuration(session.startedAt)}  \n`;
   md += `**Status:** ${getStatusEmoji(finalState.phase)} ${finalState.phase}  \n`;
-  md += `**Iterations:** ${session.iterations}/3  \n\n`;
+  md += `**Iterations:** ${session.iterations}/10  \n\n`;
   
   // Timeline
   md += "## Timeline\n\n";
@@ -141,7 +141,7 @@ function generateMarkdownReport(data: ExportData): string {
   // Stats
   md += "## Stats\n\n";
   md += `- **Phase:** ${finalState.phase}\n`;
-  md += `- **Iteration:** ${finalState.iteration}/3\n`;
+  md += `- **Iteration:** ${finalState.iteration}/10\n`;
   md += `- **Commits:** ${commits.length}\n`;
   
   return md;

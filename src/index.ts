@@ -221,7 +221,7 @@ program
     console.log(`Phase: ${chalk.cyan(phase)}`);
     console.log(`Branch: ${chalk.cyan(branch)}`);
     console.log(`Commits: ${commits}`);
-    console.log(`Iteration: ${state.iteration}/3`);
+    console.log(`Iteration: ${state.iteration}/10`);
     
     if (state.featureName) {
       console.log(`Feature: ${state.featureName}`);

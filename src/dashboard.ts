@@ -35,7 +35,7 @@ function renderState(state: WorkflowState): void {
   console.log(`  Branch: ${chalk.green(branch)}`);
   console.log(`  Commits: ${commits > 0 ? chalk.yellow(commits) : chalk.gray(commits)} ${chalk.dim(`(+${branchStatus.ahead}/-${branchStatus.behind} vs main)`)}`);
   console.log(`  Phase: ${chalk.cyan(phase.toUpperCase())}`);
-  console.log(`  Iteration: ${state.iteration}/3`);
+  console.log(`  Iteration: ${state.iteration}/10`);
   if (state.featureName) {
     console.log(`  Feature: ${chalk.white(state.featureName)}`);
   }
