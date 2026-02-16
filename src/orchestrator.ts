@@ -31,6 +31,8 @@ import {
   createFeatureBranch,
   commitChanges,
   createPullRequest,
+  mergePullRequest,
+  getPRStatus,
   getFeatureNameFromPlan,
   createCheckpointCommit,
   isMainBranch,
@@ -237,8 +239,17 @@ function renderNextAction(phase: Phase, signals: Record<string, boolean>, config
       break;
 
     case "complete":
-      console.log(`    ${chalk.green("🎉 Workflow complete!")}`);
-      console.log(`    Press ${key(config.keybindings.quit)} to exit`);
+      if (!signals.pr) {
+        // PR not created yet
+        console.log(`    ${chalk.green("Ready for PR!")} Press ${key(config.keybindings.create_pr)} to create PR`);
+      } else if (signals.pr && !signals.merged) {
+        // PR created, ready to merge or move on
+        console.log(`    ${chalk.green("PR created!")} Press ${key(config.keybindings.merge_pr)} to merge or ${key(config.keybindings.new_feature)} for new feature`);
+      } else {
+        // Fully complete
+        console.log(`    ${chalk.green("🎉 Workflow complete!")}`);
+        console.log(`    Press ${key(config.keybindings.new_feature)} for new feature or ${key(config.keybindings.quit)} to quit`);
+      }
       break;
   }
 
@@ -253,9 +264,10 @@ function renderMenu(config: Config): void {
   const items = [
     [`${kb.dispatch_plan}`, "Plan → Workers", `${kb.dispatch_review}`, "Review"],
     [`${kb.dispatch_refine}`, "Refine", `${kb.dispatch_compound}`, "Compound"],
-    [`${kb.create_pr}`, "Push & PR", `${kb.commit_checkpoint}`, "Commit"],
-    [`${kb.refresh_status}`, "Refresh", `${kb.new_feature}`, "New Feature"],
-    [`${kb.open_web}`, "Web Dashboard", `${kb.quit}`, "Quit"],
+    [`${kb.create_pr}`, "Push & PR", `${kb.merge_pr}`, "Merge PR"],
+    [`${kb.commit_checkpoint}`, "Commit", `${kb.new_feature}`, "New Feature"],
+    [`${kb.refresh_status}`, "Refresh", `${kb.open_web}`, "Web Dashboard"],
+    [`${kb.quit}`, "Quit", "", ""],
   ];
 
   for (const [key1, desc1, key2, desc2] of items) {
@@ -473,6 +485,91 @@ async function handleCreatePR(config: Config, state: WorkflowState): Promise<voi
     saveState(state);
   } else {
     console.log(chalk.red(`\n✗ Failed: ${result.error}\n`));
+  }
+
+  await sleep(2000);
+}
+
+async function handleMergePR(config: Config, state: WorkflowState): Promise<void> {
+  // Check if PR exists and get status
+  const prStatus = getPRStatus();
+
+  if (!prStatus.exists) {
+    console.log(chalk.red("\n⚠️  No PR found for current branch\n"));
+    await sleep(1500);
+    return;
+  }
+
+  if (prStatus.state === "MERGED") {
+    console.log(chalk.yellow("\n⚠️  PR already merged\n"));
+    await sleep(1500);
+    return;
+  }
+
+  if (prStatus.state === "CLOSED") {
+    console.log(chalk.red("\n⚠️  PR is closed\n"));
+    await sleep(1500);
+    return;
+  }
+
+  // Show CI status before attempting merge
+  console.log(chalk.cyan("\n🔀 Checking CI status before merge..."));
+
+  if (prStatus.checksStatus === "PENDING") {
+    console.log(chalk.yellow("\n⏳ CI checks are still running"));
+    console.log(chalk.dim("   Wait for CI to complete before merging\n"));
+    await sleep(2000);
+    return;
+  }
+
+  if (prStatus.checksStatus === "FAILING") {
+    console.log(chalk.red("\n❌ CI checks are failing - cannot merge"));
+    if (prStatus.checksFailing && prStatus.checksFailing.length > 0) {
+      console.log(chalk.red("   Failing checks:"));
+      for (const check of prStatus.checksFailing) {
+        console.log(chalk.red(`   • ${check}`));
+      }
+    }
+    console.log(chalk.dim("\n   Fix the failing checks and try again\n"));
+    await sleep(3000);
+    return;
+  }
+
+  if (prStatus.mergeable === "CONFLICTING") {
+    console.log(chalk.red("\n⚠️  PR has merge conflicts"));
+    console.log(chalk.dim("   Resolve conflicts before merging\n"));
+    await sleep(2000);
+    return;
+  }
+
+  // All checks passed, proceed with merge
+  console.log(chalk.green("✓ CI checks passed"));
+  console.log(chalk.cyan("  Merging PR (squash)..."));
+
+  const result = mergePullRequest("squash");
+
+  if (result.success) {
+    console.log(chalk.green("\n✓ PR merged successfully!"));
+    console.log(chalk.green("✓ Switched to main and pulled latest"));
+    console.log(chalk.green("✓ Feature branch deleted\n"));
+
+    // Reset state for next feature
+    state.phase = "init";
+    state.signals = {};
+    state.featureName = undefined;
+    state.branchName = getCurrentBranch();
+    state.commitCount = 0;
+    saveState(state);
+
+    addTimelineEvent("git", "PR merged and branch cleaned up");
+  } else {
+    console.log(chalk.red(`\n✗ Merge failed: ${result.error}\n`));
+    if (result.checksFailing && result.checksFailing.length > 0) {
+      console.log(chalk.red("   Failing checks:"));
+      for (const check of result.checksFailing) {
+        console.log(chalk.red(`   • ${check}`));
+      }
+    }
   }
 
   await sleep(2000);
@@ -1006,6 +1103,11 @@ export async function startOrchestrator(): Promise<void> {
 
       case kb.create_pr:
         await handleCreatePR(config, state);
+        break;
+
+      case kb.merge_pr:
+        await handleMergePR(config, state);
+        state = loadState();
         break;
 
       case kb.commit_checkpoint:

@@ -97,6 +97,7 @@ INIT → PLANNING → IMPLEMENTING → REVIEWING → REFINING → COMPOUNDING �
 | `F` | Dispatch refine (after review FAIL) |
 | `C` | Dispatch compound (after review PASS) |
 | `G` | Push & create PR |
+| `M` | Merge PR (squash) |
 | `K` | Manual commit checkpoint |
 | `S` | Refresh status |
 | `N` | New feature (clear workflow) |

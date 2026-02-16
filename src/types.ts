@@ -48,6 +48,7 @@ export interface KeybindingsConfig {
   dispatch_refine: string;
   dispatch_compound: string;
   create_pr: string;
+  merge_pr: string;
   commit_checkpoint: string;
   refresh_status: string;
   new_feature: string;

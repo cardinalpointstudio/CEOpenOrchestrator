@@ -41,6 +41,7 @@ const DEFAULT_CONFIG: Config = {
     dispatch_refine: "f",
     dispatch_compound: "c",
     create_pr: "g",
+    merge_pr: "m",
     commit_checkpoint: "k",
     refresh_status: "s",
     new_feature: "n",

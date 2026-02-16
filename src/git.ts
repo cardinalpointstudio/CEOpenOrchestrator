@@ -308,6 +308,134 @@ export function getCommitsAheadBehind(): { ahead: number; behind: number } {
   }
 }
 
+export type MergeStrategy = "squash" | "merge" | "rebase";
+
+export function mergePullRequest(
+  strategy: MergeStrategy = "squash",
+  skipChecks: boolean = false
+): { success: boolean; error?: string; checksFailing?: string[] } {
+  try {
+    const currentBranch = getCurrentBranch();
+
+    // Check if we're on main - can't merge from main
+    if (currentBranch === "main" || currentBranch === "master") {
+      return { success: false, error: "Cannot merge from main branch" };
+    }
+
+    // Get PR status including CI checks
+    const prStatus = getPRStatus();
+
+    if (!prStatus.exists) {
+      return { success: false, error: "No PR found for current branch" };
+    }
+
+    // Check CI status before merging (unless skipped)
+    if (!skipChecks) {
+      if (prStatus.checksStatus === "FAILING") {
+        return {
+          success: false,
+          error: "CI checks are failing - cannot merge",
+          checksFailing: prStatus.checksFailing,
+        };
+      }
+
+      if (prStatus.checksStatus === "PENDING") {
+        return {
+          success: false,
+          error: "CI checks are still running - wait for completion",
+        };
+      }
+
+      // Check if PR is mergeable (no conflicts, etc.)
+      if (prStatus.mergeable === "CONFLICTING") {
+        return {
+          success: false,
+          error: "PR has merge conflicts - resolve before merging",
+        };
+      }
+
+      if (prStatus.mergeable === "UNKNOWN") {
+        // GitHub is still calculating mergeability, wait a moment
+        return {
+          success: false,
+          error: "GitHub is checking mergeability - try again in a moment",
+        };
+      }
+    }
+
+    // Merge the PR with specified strategy
+    const strategyFlag = strategy === "merge" ? "--merge" : strategy === "rebase" ? "--rebase" : "--squash";
+    execSync(`gh pr merge ${strategyFlag} --delete-branch`, { stdio: "ignore" });
+
+    // Switch to main and pull latest
+    execSync("git checkout main", { stdio: "ignore" });
+    execSync("git pull origin main", { stdio: "ignore" });
+
+    return { success: true };
+  } catch (e) {
+    const error = e instanceof Error ? e.message : String(e);
+    return { success: false, error };
+  }
+}
+
+export interface PRCheckStatus {
+  exists: boolean;
+  state?: string;
+  url?: string;
+  mergeable?: string;
+  checksStatus?: "PENDING" | "PASSING" | "FAILING" | "UNKNOWN";
+  checksFailing?: string[];
+}
+
+export function getPRStatus(): PRCheckStatus {
+  try {
+    const output = execSync(
+      "gh pr view --json state,url,mergeable,statusCheckRollup",
+      { encoding: "utf-8" }
+    );
+    const data = JSON.parse(output);
+
+    // Parse CI check status
+    let checksStatus: PRCheckStatus["checksStatus"] = "UNKNOWN";
+    const checksFailing: string[] = [];
+
+    if (data.statusCheckRollup && Array.isArray(data.statusCheckRollup)) {
+      const checks = data.statusCheckRollup;
+      const hasPending = checks.some((c: { status?: string; state?: string }) =>
+        c.status === "IN_PROGRESS" || c.status === "QUEUED" || c.status === "PENDING"
+      );
+      const hasFailing = checks.some((c: { conclusion?: string; state?: string }) =>
+        c.conclusion === "FAILURE" || c.conclusion === "ERROR" || c.state === "FAILURE" || c.state === "ERROR"
+      );
+
+      if (hasFailing) {
+        checksStatus = "FAILING";
+        for (const check of checks) {
+          if (check.conclusion === "FAILURE" || check.conclusion === "ERROR" ||
+              check.state === "FAILURE" || check.state === "ERROR") {
+            checksFailing.push(check.name || check.context || "Unknown check");
+          }
+        }
+      } else if (hasPending) {
+        checksStatus = "PENDING";
+      } else if (checks.length > 0) {
+        checksStatus = "PASSING";
+      }
+    }
+
+    return {
+      exists: true,
+      state: data.state,
+      url: data.url,
+      mergeable: data.mergeable,
+      checksStatus,
+      checksFailing,
+    };
+  } catch {
+    return { exists: false };
+  }
+}
+
 export function validateGitSetup(): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
 
