@@ -313,7 +313,7 @@ function renderSessionManagement(state: WorkflowState): void {
   console.log();
   console.log(`  Iteration: ${state.iteration}/10  |  Commits: ${state.commitCount ?? 0}`);
   console.log();
-  console.log(`  ${chalk.cyan("[E]")} Export Log  ${chalk.cyan("[X]")} Clear & Restart`);
+  console.log(`  ${chalk.cyan("[E]")} Export Log`);
   console.log();
 }
 
@@ -606,7 +606,10 @@ async function handleManualCommit(config: Config, state: WorkflowState): Promise
 }
 
 async function handleNewFeature(): Promise<void> {
-  console.log(chalk.yellow("\n🔄 Clear workflow and start new feature? [y/N]"));
+  console.log(chalk.yellow("\n🔄 New Feature"));
+  console.log(chalk.dim("   This will clear all workflow state and signals."));
+  console.log(chalk.dim("   Commits will NOT be affected.\n"));
+  console.log("Start new feature? [y/N]\n");
 
   // Wait for user confirmation
   const response = await new Promise<string>((resolve) => {
@@ -616,7 +619,7 @@ async function handleNewFeature(): Promise<void> {
   });
 
   if (response === "y") {
-    console.log(chalk.cyan("\n🧹 Clearing workflow..."));
+    console.log(chalk.dim("\n  Clearing workflow..."));
     clearWorkflow();
     console.log(chalk.green("\n✓ Workflow cleared. Go to PM window to start.\n"));
     await sleep(1000);
@@ -927,30 +930,6 @@ async function handleExportSession(): Promise<void> {
   await sleep(500);
 }
 
-async function handleClearSession(): Promise<void> {
-  console.log(chalk.yellow("\n⚠️  Clear Session"));
-  console.log(chalk.dim("   This will clear all workflow state and signals."));
-  console.log(chalk.dim("   Commits will NOT be affected.\n"));
-  console.log("Are you sure? [y/N]\n");
-  
-  const confirm = await new Promise<string>((resolve) => {
-    process.stdin.once("data", (data) => {
-      resolve(data.toString().trim().toLowerCase());
-    });
-  });
-  
-  if (confirm !== "y") {
-    console.log(chalk.dim("\n  Cancelled\n"));
-    return;
-  }
-  
-  console.log(chalk.dim("\n  Clearing session..."));
-  clearWorkflow();
-  console.log(chalk.green("\n✓ Session cleared\n"));
-  
-  await sleep(1000);
-}
-
 async function handleOpenWebDashboard(config: Config): Promise<void> {
   const port = config.dashboard.web_port || 8080;
   const url = `http://localhost:${port}`;
@@ -1135,10 +1114,6 @@ export async function startOrchestrator(): Promise<void> {
 
       case "e":
         await handleExportSession();
-        break;
-
-      case "x":
-        await handleClearSession();
         break;
 
       case kb.quit:
