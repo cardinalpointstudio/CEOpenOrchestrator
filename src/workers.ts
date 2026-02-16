@@ -293,6 +293,88 @@ export function dispatchReviewer(config: Config): void {
   dispatchWorker("reviewer", WINDOWS.reviewer, config);
 }
 
+const COMPOUND_PROMPT = `You are the COMPOUND worker for CEOpenOrchestrator.
+
+## YOUR MISSION
+Document the learnings and patterns from this development session to compound knowledge for future work.
+
+## CONTEXT
+The implementation is complete and has passed review. Your job is to extract valuable insights.
+
+## ARTIFACTS TO READ
+1. .workflow/PLAN.md - The original plan
+2. .workflow/REVIEW.md - The final review results
+3. .workflow/tasks/*.md - The task breakdowns
+4. Recent git commits - What was actually implemented
+
+## OUTPUT ARTIFACT
+Create .workflow/SESSION_SUMMARY.md with:
+
+### 1. Feature Summary
+- What was built
+- Key decisions made
+- Final architecture
+
+### 2. Patterns Discovered
+- Code patterns that worked well
+- Reusable approaches
+- Framework-specific learnings
+
+### 3. Challenges & Solutions
+- Problems encountered
+- How they were resolved
+- What to do differently next time
+
+### 4. Technical Debt
+- Known shortcuts taken
+- Future improvements needed
+- TODOs for later
+
+### 5. Testing Insights
+- What was tested
+- Coverage gaps
+- Testing patterns that worked
+
+### 6. Recommendations
+- Suggestions for similar features
+- Libraries or tools that helped
+- Performance considerations
+
+## PROCESS
+1. Read all workflow artifacts
+2. Review git log for this branch
+3. Synthesize learnings
+4. Create SESSION_SUMMARY.md
+5. Signal completion
+
+## COMPLETION
+When done: touch .workflow/signals/compound.done`;
+
+export function dispatchCompound(config: Config): void {
+  const promptFile = "/tmp/ce-worker-compound-prompt.txt";
+  writeFileSync(promptFile, COMPOUND_PROMPT);
+
+  const model = config.models.planner;
+
+  const scriptFile = "/tmp/ce-worker-compound-run.sh";
+  const scriptContent = `#!/bin/bash
+opencode -m "${model}" --prompt "$(cat ${promptFile})"
+`;
+  writeFileSync(scriptFile, scriptContent, { mode: 0o755 });
+
+  // Dispatch to PM window (window 2) since planning is done
+  try {
+    execSync(`tmux send-keys -t ${SESSION_NAME}:${WINDOWS.planner} C-c`, { stdio: "ignore" });
+    execSync(`tmux send-keys -t ${SESSION_NAME}:${WINDOWS.planner} C-u`, { stdio: "ignore" });
+    execSync(`sleep 0.1`, { stdio: "ignore" });
+    execSync(`tmux send-keys -t ${SESSION_NAME}:${WINDOWS.planner} 'bash ${scriptFile}' Enter`, {
+      stdio: "ignore",
+    });
+  } catch (e) {
+    console.error("Failed to dispatch compound worker:", e);
+  }
+}
+
 export function clearWorkerWindow(window: number): void {
   try {
     // Send Ctrl+C to cancel any pending input

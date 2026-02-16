@@ -144,7 +144,7 @@ program
     console.log(chalk.blue("\n🎉 Ready to go!"));
     console.log(chalk.dim("\nNext steps:"));
     console.log("  1. Run: ce-orchestrate start");
-    console.log("  2. In the Plan window, describe your feature\n");
+    console.log("  2. In the PM window, describe your feature\n");
   });
 
 program

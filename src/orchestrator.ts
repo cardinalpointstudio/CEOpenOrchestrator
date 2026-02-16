@@ -42,7 +42,7 @@ import {
   getCommitsAheadBehind,
 } from "./git.js";
 import { exportToJSON, exportToMarkdown } from "./export.js";
-import { dispatchAllWorkers, dispatchReviewer } from "./workers.js";
+import { dispatchAllWorkers, dispatchReviewer, dispatchCompound } from "./workers.js";
 import { getRecentErrors, formatErrorsForDisplay, hasErrors } from "./errors.js";
 
 // ============================================================================
@@ -181,7 +181,7 @@ function renderNextAction(phase: Phase, signals: Record<string, boolean>, config
 
   switch (phase) {
     case "init":
-      console.log(`    Go to Plan window and describe your feature`);
+      console.log(`    Go to PM window and describe your feature`);
       console.log(`    ${chalk.dim(`(Ctrl+b ${WINDOWS.planner})`)}`);
       break;
 
@@ -189,7 +189,7 @@ function renderNextAction(phase: Phase, signals: Record<string, boolean>, config
       if (signals.plan) {
         console.log(`    Plan complete! Press ${key(config.keybindings.dispatch_plan)} to dispatch workers`);
       } else {
-        console.log(`    Wait for Planner to create PLAN.md, then approve`);
+        console.log(`    Wait for PM to create PLAN.md, then approve`);
         console.log(`    Press ${key(config.keybindings.dispatch_plan)} when ready`);
       }
       break;
@@ -443,11 +443,9 @@ async function handleDispatchCompound(config: Config, state: WorkflowState): Pro
     return;
   }
 
-  console.log(chalk.cyan("\n📚 Dispatching compound..."));
+  console.log(chalk.cyan("\n📚 Dispatching compound worker..."));
 
-  // TODO: Implement compound worker dispatch
-  // For now, just create the signal
-  createSignal("compound");
+  dispatchCompound(config);
 
   logPhaseChange("compounding");
   state.phase = "compounding";
@@ -523,7 +521,7 @@ async function handleNewFeature(): Promise<void> {
   if (response === "y") {
     console.log(chalk.cyan("\n🧹 Clearing workflow..."));
     clearWorkflow();
-    console.log(chalk.green("\n✓ Workflow cleared. Go to Plan window to start.\n"));
+    console.log(chalk.green("\n✓ Workflow cleared. Go to PM window to start.\n"));
     await sleep(1000);
   } else {
     console.log(chalk.dim("\nCancelled\n"));

@@ -7,7 +7,7 @@ Parallel workflow orchestration for OpenCode - implementing the Compound Enginee
 CEOpenOrchestrator enables multiple AI agents to work simultaneously on different aspects of a software project, following the principle: **80% planning/review, 20% execution**.
 
 It spins up a tmux session with specialized workers:
-- **Planner**: Designs architecture and creates implementation plan
+- **PM (Project Manager)**: Designs architecture and creates implementation plan
 - **Backend**: Implements API, database, and server logic
 - **Frontend**: Implements UI components and user interactions
 - **Tests**: Writes comprehensive test suites
@@ -81,7 +81,7 @@ INIT → PLANNING → IMPLEMENTING → REVIEWING → REFINING → COMPOUNDING �
 | Window | Role | Purpose |
 |--------|------|---------|
 | 1 | **Orchestrator** | Interactive command center |
-| 2 | **Planner** | Creates PLAN.md and architecture |
+| 2 | **PM** | Creates PLAN.md and architecture |
 | 3 | **Backend** | Implements API and server code |
 | 4 | **Frontend** | Implements UI components |
 | 5 | **Tests** | Writes test suites |
@@ -106,7 +106,7 @@ INIT → PLANNING → IMPLEMENTING → REVIEWING → REFINING → COMPOUNDING �
 
 ```
 Ctrl+b 1  → Orchestrator (command center)
-Ctrl+b 2  → Plan window (architect)
+Ctrl+b 2  → PM window (architect)
 Ctrl+b 3  → Backend window
 Ctrl+b 4  → Frontend window
 Ctrl+b 5  → Tests window
@@ -170,7 +170,7 @@ Configuration follows precedence:
 
 ```
 .workflow/
-├── PLAN.md              # Feature plan (created by Planner)
+├── PLAN.md              # Feature plan (created by PM)
 ├── REVIEW.md            # Review results (created by Reviewer)
 ├── ce-config.json       # Project configuration
 ├── contracts/           # TypeScript interfaces
@@ -258,7 +258,7 @@ bun run lint
 │              TMUX SESSION: "opencode-ce"                   │
 ├─────────────────────────────────────────────────────────────┤
 │  Window 1: Orchestrator (Interactive TUI)                  │
-│  Window 2: Planner (opencode --prompt "...")               │
+│  Window 2: PM (opencode --prompt "...")                    │
 │  Window 3: Backend Worker                                  │
 │  Window 4: Frontend Worker                                 │
 │  Window 5: Tests Worker                                    │
