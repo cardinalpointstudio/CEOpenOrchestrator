@@ -46,6 +46,8 @@ const DEFAULT_CONFIG: Config = {
     refresh_status: "s",
     new_feature: "n",
     open_web: "u",
+    branch_management: "b",
+    export_session: "e",
     quit: "q",
   },
   git: {

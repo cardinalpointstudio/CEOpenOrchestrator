@@ -53,6 +53,8 @@ export interface KeybindingsConfig {
   refresh_status: string;
   new_feature: string;
   open_web: string;
+  branch_management: string;
+  export_session: string;
   quit: string;
 }
 

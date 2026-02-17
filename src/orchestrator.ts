@@ -68,6 +68,43 @@ const UI = {
   },
 };
 
+// Modal state to prevent re-rendering during interactive prompts
+let isInModal = false;
+
+// Helper to read a full line of input (temporarily disables raw mode)
+async function readLine(prompt?: string): Promise<string> {
+  if (prompt) {
+    process.stdout.write(prompt);
+  }
+  showCursor();
+
+  // Disable raw mode to allow normal line editing
+  if (process.stdin.isTTY) {
+    process.stdin.setRawMode(false);
+  }
+
+  return new Promise<string>((resolve) => {
+    process.stdin.once("data", (data) => {
+      const input = data.toString().trim();
+      // Re-enable raw mode
+      if (process.stdin.isTTY) {
+        process.stdin.setRawMode(true);
+      }
+      hideCursor();
+      resolve(input);
+    });
+  });
+}
+
+// Helper to read a single character (keeps raw mode)
+async function readChar(): Promise<string> {
+  return new Promise<string>((resolve) => {
+    process.stdin.once("data", (data) => {
+      resolve(data.toString().trim());
+    });
+  });
+}
+
 // ============================================================================
 // Display Functions
 // ============================================================================
@@ -267,7 +304,7 @@ function renderMenu(config: Config): void {
     [`${kb.create_pr}`, "Push & PR", `${kb.merge_pr}`, "Merge PR"],
     [`${kb.commit_checkpoint}`, "Commit", `${kb.new_feature}`, "New Feature"],
     [`${kb.refresh_status}`, "Refresh", `${kb.open_web}`, "Web Dashboard"],
-    [`${kb.quit}`, "Quit", "", ""],
+    [`${kb.quit}`, "Quit", `${kb.export_session}`, "Export"],
   ];
 
   for (const [key1, desc1, key2, desc2] of items) {
@@ -280,21 +317,22 @@ function renderMenu(config: Config): void {
   console.log(`  ${chalk.dim(`Windows: Ctrl+b then 1=Orch 2=PM 3=Back 4=Front 5=Tests 6=Review 7=Dashboard`)}`);
 }
 
-function renderBranchManagement(state: WorkflowState): void {
+function renderBranchManagement(state: WorkflowState, config: Config): void {
   const branch = state.branchName || getCurrentBranch();
   const isMain = isMainBranch();
-  
+  const kb = config.keybindings;
+
   console.log();
   console.log(`  ${chalk.cyan("─".repeat(UI.width - 4))}`);
   console.log(`  ${chalk.bold("Branch Management:")}`);
   console.log();
-  
+
   if (isMain) {
     // Yellow warning for main branch
     console.log(chalk.yellow(`  ⚠️  WARNING: Working on ${branch} branch`));
     console.log(chalk.dim(`     Compound workflow works best with feature branches`));
     console.log();
-    console.log(`  Press ${chalk.cyan("[B]")} to create feature branch`);
+    console.log(`  Press ${chalk.cyan(`[${kb.branch_management.toUpperCase()}]`)} to create feature branch`);
   } else {
     console.log(`  Current: ${chalk.green(branch)}`);
     const { ahead, behind } = getCommitsAheadBehind();
@@ -302,18 +340,8 @@ function renderBranchManagement(state: WorkflowState): void {
       console.log(`  Status: ${chalk.green("+" + ahead)} / ${chalk.red("-" + behind)} commits vs main`);
     }
     console.log();
-    console.log(`  Press ${chalk.cyan("[B]")} for branch options`);
+    console.log(`  Press ${chalk.cyan(`[${kb.branch_management.toUpperCase()}]`)} for branch options`);
   }
-  console.log();
-}
-
-function renderSessionManagement(state: WorkflowState): void {
-  console.log(`  ${chalk.cyan("─".repeat(UI.width - 4))}`);
-  console.log(`  ${chalk.bold("Session Management:")}`);
-  console.log();
-  console.log(`  Iteration: ${state.iteration}/10  |  Commits: ${state.commitCount ?? 0}`);
-  console.log();
-  console.log(`  ${chalk.cyan("[E]")} Export Log`);
   console.log();
 }
 
@@ -337,8 +365,7 @@ function render(state: WorkflowState, config: Config): void {
 
   renderNextAction(state.phase, state.signals, config);
   renderMenu(config);
-  renderBranchManagement(state);
-  renderSessionManagement(state);
+  renderBranchManagement(state, config);
 }
 
 // ============================================================================
@@ -606,17 +633,13 @@ async function handleManualCommit(config: Config, state: WorkflowState): Promise
 }
 
 async function handleNewFeature(): Promise<void> {
+  isInModal = true;
   console.log(chalk.yellow("\n🔄 New Feature"));
   console.log(chalk.dim("   This will clear all workflow state and signals."));
   console.log(chalk.dim("   Commits will NOT be affected.\n"));
   console.log("Start new feature? [y/N]\n");
 
-  // Wait for user confirmation
-  const response = await new Promise<string>((resolve) => {
-    process.stdin.once("data", (data) => {
-      resolve(data.toString().trim().toLowerCase());
-    });
-  });
+  const response = (await readChar()).toLowerCase();
 
   if (response === "y") {
     console.log(chalk.dim("\n  Clearing workflow..."));
@@ -627,11 +650,13 @@ async function handleNewFeature(): Promise<void> {
     console.log(chalk.dim("\nCancelled\n"));
     await sleep(500);
   }
+  isInModal = false;
 }
 
 async function handleBranchManagement(config: Config, state: WorkflowState): Promise<void> {
+  isInModal = true;
   const isMain = isMainBranch();
-  
+
   if (isMain) {
     console.log(chalk.yellow("\n⚠️  You are on main branch"));
     console.log(chalk.dim("   Compound workflow works best with feature branches.\n"));
@@ -639,14 +664,9 @@ async function handleBranchManagement(config: Config, state: WorkflowState): Pro
     console.log("  [1] Create feature branch (recommended)");
     console.log("  [2] Continue on main anyway");
     console.log("  [3] Cancel\n");
-    
-    // Wait for user input
-    const response = await new Promise<string>((resolve) => {
-      process.stdin.once("data", (data) => {
-        resolve(data.toString().trim());
-      });
-    });
-    
+
+    const response = await readChar();
+
     switch (response) {
       case "1":
         await createNewBranch();
@@ -665,13 +685,9 @@ async function handleBranchManagement(config: Config, state: WorkflowState): Pro
     console.log("  [3] Rename current branch");
     console.log("  [4] Delete branch");
     console.log("  [5] Cancel\n");
-    
-    const response = await new Promise<string>((resolve) => {
-      process.stdin.once("data", (data) => {
-        resolve(data.toString().trim());
-      });
-    });
-    
+
+    const response = await readChar();
+
     switch (response) {
       case "1":
         await switchToBranch(config);
@@ -689,7 +705,8 @@ async function handleBranchManagement(config: Config, state: WorkflowState): Pro
         console.log(chalk.dim("\n  Cancelled\n"));
     }
   }
-  
+
+  isInModal = false;
   await sleep(500);
 }
 
@@ -700,13 +717,9 @@ async function createNewBranch(): Promise<void> {
   console.log("  [2] Feature Branch   - feature/name");
   console.log("  [3] Hotfix           - hotfix/name");
   console.log("  [4] Custom           - you specify\n");
-  
-  const templateResponse = await new Promise<string>((resolve) => {
-    process.stdin.once("data", (data) => {
-      resolve(data.toString().trim());
-    });
-  });
-  
+
+  const templateResponse = await readChar();
+
   let template: string;
   switch (templateResponse) {
     case "2":
@@ -721,21 +734,16 @@ async function createNewBranch(): Promise<void> {
     default:
       template = "compound";
   }
-  
-  console.log(chalk.dim("\nEnter branch name (without prefix):"));
-  const name = await new Promise<string>((resolve) => {
-    process.stdin.once("data", (data) => {
-      resolve(data.toString().trim());
-    });
-  });
-  
+
+  const name = await readLine("\nEnter branch name (without prefix): ");
+
   if (!name) {
     console.log(chalk.red("\n✗ Branch name required\n"));
     return;
   }
-  
+
   const result = createBranchFromTemplate(template, name);
-  
+
   if (result.success && result.branch) {
     console.log(chalk.green(`\n✓ Created and switched to: ${result.branch}\n`));
   } else {
@@ -745,22 +753,16 @@ async function createNewBranch(): Promise<void> {
 
 async function switchToBranch(config: Config): Promise<void> {
   const branches = getRecentBranches(10);
-  
+
   console.log(chalk.cyan("\n📁 Switch Branch\n"));
   console.log("Recent branches:");
-  
+
   branches.forEach((branch, i) => {
     const current = branch === getCurrentBranch() ? " (current)" : "";
     console.log(`  [${i + 1}] ${branch}${current}`);
   });
-  
-  console.log("\nEnter number or type branch name:");
-  
-  const response = await new Promise<string>((resolve) => {
-    process.stdin.once("data", (data) => {
-      resolve(data.toString().trim());
-    });
-  });
+
+  const response = await readLine("\nEnter number or branch name: ");
 
   const index = Number.parseInt(response) - 1;
   const branchName = branches[index] || response;
@@ -769,7 +771,7 @@ async function switchToBranch(config: Config): Promise<void> {
     console.log(chalk.red("\n✗ Invalid branch\n"));
     return;
   }
-  
+
   console.log(chalk.dim("\n  Saving current session..."));
   const currentBranch = getCurrentBranch();
   saveSessionToBranch(currentBranch);
@@ -792,11 +794,7 @@ async function switchToBranch(config: Config): Promise<void> {
         console.log(chalk.yellow("\n⚠️  Workers were active in this session"));
         console.log("   [R] Restart workers  [Enter] Continue\n");
 
-        const restartResponse = await new Promise<string>((resolve) => {
-          process.stdin.once("data", (data) => {
-            resolve(data.toString().trim().toLowerCase());
-          });
-        });
+        const restartResponse = (await readChar()).toLowerCase();
 
         if (restartResponse === "r") {
           console.log(chalk.cyan("\n🚀 Restarting workers..."));
@@ -817,24 +815,19 @@ async function switchToBranch(config: Config): Promise<void> {
 
 async function handleRenameBranch(state: WorkflowState): Promise<void> {
   const current = state.branchName || getCurrentBranch();
-  
+
   console.log(chalk.cyan("\n📁 Rename Branch\n"));
   console.log(`Current: ${current}`);
-  console.log("Enter new name (without prefix):\n");
-  
-  const newName = await new Promise<string>((resolve) => {
-    process.stdin.once("data", (data) => {
-      resolve(data.toString().trim());
-    });
-  });
-  
+
+  const newName = await readLine("Enter new name (without prefix): ");
+
   if (!newName) {
     console.log(chalk.red("\n✗ New name required\n"));
     return;
   }
-  
+
   const result = renameBranch(current, newName);
-  
+
   if (result.success) {
     console.log(chalk.green(`\n✓ Renamed to: ${newName}\n`));
   } else {
@@ -844,21 +837,15 @@ async function handleRenameBranch(state: WorkflowState): Promise<void> {
 
 async function handleDeleteBranch(): Promise<void> {
   const branches = getRecentBranches(10).filter(b => b !== getCurrentBranch());
-  
+
   console.log(chalk.cyan("\n📁 Delete Branch\n"));
   console.log("Available branches:");
-  
+
   branches.forEach((branch, i) => {
     console.log(`  [${i + 1}] ${branch}`);
   });
 
-  console.log("\nEnter number or type branch name:");
-
-  const response = await new Promise<string>((resolve) => {
-    process.stdin.once("data", (data) => {
-      resolve(data.toString().trim());
-    });
-  });
+  const response = await readLine("\nEnter number or branch name: ");
 
   const index = Number.parseInt(response) - 1;
   const branchName = branches[index] || response;
@@ -866,23 +853,19 @@ async function handleDeleteBranch(): Promise<void> {
   if (!branchName || branchName === getCurrentBranch()) {
     console.log(chalk.red("\n✗ Cannot delete current branch\n"));
     return;
-  } 
-  
+  }
+
   console.log(chalk.yellow(`\n⚠️  Are you sure you want to delete ${branchName}? [y/N]`));
-  
-  const confirm = await new Promise<string>((resolve) => {
-    process.stdin.once("data", (data) => {
-      resolve(data.toString().trim().toLowerCase());
-    });
-  });
-  
+
+  const confirm = (await readChar()).toLowerCase();
+
   if (confirm !== "y") {
     console.log(chalk.dim("\n  Cancelled\n"));
     return;
   }
-  
+
   const result = deleteBranch(branchName);
-  
+
   if (result.success) {
     console.log(chalk.green(`\n✓ Deleted: ${branchName}\n`));
   } else {
@@ -891,19 +874,16 @@ async function handleDeleteBranch(): Promise<void> {
 }
 
 async function handleExportSession(): Promise<void> {
+  isInModal = true;
   console.log(chalk.cyan("\n📤 Export Session\n"));
   console.log("Options:");
   console.log("  [1] Export as JSON");
   console.log("  [2] Export as Markdown");
   console.log("  [3] Export both");
   console.log("  [4] Cancel\n");
-  
-  const response = await new Promise<string>((resolve) => {
-    process.stdin.once("data", (data) => {
-      resolve(data.toString().trim());
-    });
-  });
-  
+
+  const response = await readChar();
+
   switch (response) {
     case "1": {
       const filepath = exportToJSON();
@@ -926,7 +906,8 @@ async function handleExportSession(): Promise<void> {
     default:
       console.log(chalk.dim("\n  Cancelled\n"));
   }
-  
+
+  isInModal = false;
   await sleep(500);
 }
 
@@ -1108,11 +1089,11 @@ export async function startOrchestrator(): Promise<void> {
         await handleOpenWebDashboard(config);
         break;
 
-      case "b":
+      case kb.branch_management:
         await handleBranchManagement(config, state);
         break;
 
-      case "e":
+      case kb.export_session:
         await handleExportSession();
         break;
 
@@ -1123,8 +1104,10 @@ export async function startOrchestrator(): Promise<void> {
         break;
     }
 
-    // Re-render
-    render(state, config);
+    // Re-render (skip if in modal mode to prevent clearing interactive prompts)
+    if (!isInModal) {
+      render(state, config);
+    }
   });
 
   // Keep process alive
