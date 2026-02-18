@@ -251,13 +251,12 @@ export function dispatchWorker(
   const promptFile = `/tmp/ce-worker-${role}-prompt.txt`;
   writeFileSync(promptFile, finalPrompt);
 
-  // Workers always use the planner's model (PM sets the model for the session)
-  const model = config.models.planner;
-
   // Create a runner script to handle quoting correctly
   const scriptFile = `/tmp/ce-worker-${role}-run.sh`;
+
+  // Never force model - let users set models manually per window and they persist
   const scriptContent = `#!/bin/bash
-opencode -m "${model}" --prompt "$(cat ${promptFile})"
+opencode --prompt "$(cat ${promptFile})"
 `;
   writeFileSync(scriptFile, scriptContent, { mode: 0o755 });
 
@@ -354,11 +353,10 @@ export function dispatchCompound(config: Config): void {
   const promptFile = "/tmp/ce-worker-compound-prompt.txt";
   writeFileSync(promptFile, COMPOUND_PROMPT);
 
-  const model = config.models.planner;
-
   const scriptFile = "/tmp/ce-worker-compound-run.sh";
+  // Never force model - let users set models manually per window
   const scriptContent = `#!/bin/bash
-opencode -m "${model}" --prompt "$(cat ${promptFile})"
+opencode --prompt "$(cat ${promptFile})"
 `;
   writeFileSync(scriptFile, scriptContent, { mode: 0o755 });
 

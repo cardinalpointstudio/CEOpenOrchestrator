@@ -463,6 +463,16 @@ async function handleDispatchRefine(config: Config, state: WorkflowState): Promi
   }
 
   console.log(chalk.cyan("\n🔧 Dispatching refine workers..."));
+
+  // Clear old refine signals to allow fresh tracking for this iteration
+  const { unlinkSync } = require("node:fs");
+  const refineSignalNames = ["backend-refine", "frontend-refine", "tests-refine"];
+  for (const sig of refineSignalNames) {
+    const signalPath = join(process.cwd(), WORKFLOW_DIR, "signals", `${sig}.done`);
+    try { unlinkSync(signalPath); } catch {}
+    state.signals[sig] = false;
+  }
+
   state.iteration++;
   dispatchAllWorkers(config, true);
 
@@ -1045,13 +1055,27 @@ export async function startOrchestrator(): Promise<void> {
         }
         break;
 
-      case kb.dispatch_review:
-        // Allow dispatch when implementing, refining, or reviewing (if reviewer not yet dispatched)
-        if (state.phase === "implementing" || state.phase === "refining" ||
-            (state.phase === "reviewing" && !state.signals.review)) {
+      case kb.dispatch_review: {
+        // Allow dispatch when implementing, refining, or after refinement is complete
+        const allRefinesDone = state.signals["backend-refine"] &&
+                               state.signals["frontend-refine"] &&
+                               state.signals["tests-refine"];
+        const canReview = state.phase === "implementing" ||
+                          state.phase === "refining" ||
+                          (state.phase === "reviewing" && !state.signals.review) ||
+                          (state.phase === "reviewing" && allRefinesDone);
+        if (canReview) {
+          // Clear old review signal if re-reviewing after refinement
+          if (allRefinesDone && state.signals.review) {
+            const { unlinkSync } = require("node:fs");
+            const reviewSignalPath = join(process.cwd(), WORKFLOW_DIR, "signals", "review.done");
+            try { unlinkSync(reviewSignalPath); } catch {}
+            state.signals.review = false;
+          }
           await handleDispatchReview(config, state);
         }
         break;
+      }
 
       case kb.dispatch_refine:
         await handleDispatchRefine(config, state);
