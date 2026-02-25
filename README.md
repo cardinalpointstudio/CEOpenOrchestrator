@@ -296,4 +296,4 @@ MIT License - see [LICENSE](LICENSE) file.
 
 ---
 
-Built with ⚡ by the CEOpenOrchestrator team
+Built by the Cardinal Point Studio team
