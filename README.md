@@ -296,4 +296,4 @@ MIT License - see [LICENSE](LICENSE) file.
 
 ---
 
-Built by the Cardinal Point Studio team
+Built by the team at Cardinal Point Studio
